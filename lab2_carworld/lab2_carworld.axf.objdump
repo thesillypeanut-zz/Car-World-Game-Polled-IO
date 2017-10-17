@@ -1,0 +1,345 @@
+
+C:/lab2_carworld/lab2_carworld.axf:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+00000000 <__cs3_interrupt_vector>:
+.equ HARD_RIGHT, 0b01111111
+
+.global	_start
+
+_start:
+ldr 	r7, =JTAG_UART	/* r7 has JTAG base address */
+   0:	e59f71ec 	ldr	r7, [pc, #492]	; 1f4 <READ_BYTE+0x14>
+bl 		READ_POSN_Z
+   4:	eb000065 	bl	1a0 <READ_POSN_Z>
+mov 	r8, r2 			/* r8 has starting z coord */
+   8:	e1a08002 	mov	r8, r2
+
+0000000c <STEER_CTRL>:
+
+main:
+STEER_CTRL:
+bl		READ_SENSOR
+   c:	eb000041 	bl	118 <READ_SENSOR>
+mov		r5, r2					/* r5 has value of sensors */
+  10:	e1a05002 	mov	r5, r2
+
+00000014 <STRAIGHT_COND>:
+
+STRAIGHT_COND:
+ldr		r6, =0b00011111
+  14:	e3a0601f 	mov	r6, #31
+cmp 	r5, r6
+  18:	e1550006 	cmp	r5, r6
+bne		RIGHT_COND
+  1c:	1a000002 	bne	2c <RIGHT_COND>
+ldr		r2, =STRAIGHT
+  20:	e3a02000 	mov	r2, #0
+bl  	SET_STEER
+  24:	eb000051 	bl	170 <SET_STEER>
+b 		SPEED_CTRL
+  28:	ea00001b 	b	9c <SPEED_CTRL>
+
+0000002c <RIGHT_COND>:
+RIGHT_COND:
+ldr		r6, =0b00011110
+  2c:	e3a0601e 	mov	r6, #30
+cmp 	r5, r6
+  30:	e1550006 	cmp	r5, r6
+bne 	HARD_RIGHT_COND
+  34:	1a000002 	bne	44 <HARD_RIGHT_COND>
+ldr		r2, =RIGHT
+  38:	e3a02050 	mov	r2, #80	; 0x50
+bl  	SET_STEER
+  3c:	eb00004b 	bl	170 <SET_STEER>
+//ldr		r2, =0x0 		 		/* set zero accel*/
+//bl 		SET_ACCEL	
+b 		SPEED_CTRL
+  40:	ea000015 	b	9c <SPEED_CTRL>
+
+00000044 <HARD_RIGHT_COND>:
+HARD_RIGHT_COND:
+ldr		r6, =0b00011100
+  44:	e3a0601c 	mov	r6, #28
+cmp 	r5, r6
+  48:	e1550006 	cmp	r5, r6
+bne		LEFT_COND
+  4c:	1a000004 	bne	64 <LEFT_COND>
+ldr		r2, =HARD_RIGHT
+  50:	e3a0207f 	mov	r2, #127	; 0x7f
+bl  	SET_STEER
+  54:	eb000045 	bl	170 <SET_STEER>
+ldr		r2, =0b10000000 		 		/* quickly decel -128*/
+  58:	e3a02080 	mov	r2, #128	; 0x80
+bl 		SET_ACCEL	
+  5c:	eb000049 	bl	188 <SET_ACCEL>
+b 		SPEED_CTRL
+  60:	ea00000d 	b	9c <SPEED_CTRL>
+
+00000064 <LEFT_COND>:
+LEFT_COND:
+ldr		r6, =0b00001111
+  64:	e3a0600f 	mov	r6, #15
+cmp 	r5, r6
+  68:	e1550006 	cmp	r5, r6
+bne		HARD_LEFT_COND
+  6c:	1a000002 	bne	7c <HARD_LEFT_COND>
+ldr		r2, =LEFT
+  70:	e3a020b0 	mov	r2, #176	; 0xb0
+bl  	SET_STEER
+  74:	eb00003d 	bl	170 <SET_STEER>
+//ldr		r2, =0x0 		 		/* set zero accel*/
+//bl 		SET_ACCEL
+b 		SPEED_CTRL
+  78:	ea000007 	b	9c <SPEED_CTRL>
+
+0000007c <HARD_LEFT_COND>:
+HARD_LEFT_COND:
+ldr		r6, =0b00000111
+  7c:	e3a06007 	mov	r6, #7
+cmp 	r5, r6
+  80:	e1550006 	cmp	r5, r6
+ldr		r2, =HARD_LEFT
+  84:	e3a02081 	mov	r2, #129	; 0x81
+bne		SPEED_CTRL
+  88:	1a000003 	bne	9c <SPEED_CTRL>
+bl  	SET_STEER
+  8c:	eb000037 	bl	170 <SET_STEER>
+ldr		r2, =0b10000000 				/* quickly decel -128*/
+  90:	e3a02080 	mov	r2, #128	; 0x80
+bl 		SET_ACCEL
+  94:	eb00003b 	bl	188 <SET_ACCEL>
+b 		SPEED_CTRL
+  98:	eaffffff 	b	9c <SPEED_CTRL>
+
+0000009c <SPEED_CTRL>:
+
+SPEED_CTRL:
+bl		READ_SPEED
+  9c:	eb000029 	bl	148 <READ_SPEED>
+ldr 	r5, =GOOD_SPEED
+  a0:	e3a0502d 	mov	r5, #45	; 0x2d
+subs	r5, r5, r2			/* compare current speed with GOOD_SPEED */	
+  a4:	e0555002 	subs	r5, r5, r2
+beq		SPEED_CTRL_END			/* speed = GOOD_SPEED */
+  a8:	0a000010 	beq	f0 <SPEED_CTRL_END>
+ldr 	r2, =0x0c  				
+  ac:	e3a0200c 	mov	r2, #12
+mul 	r2, r5, r2 				/* multiply speed diff by 11 */ 
+  b0:	e0020295 	mul	r2, r5, r2
+ldr 	r9, =0x0a				/* 0x0a = 10 dec */
+  b4:	e3a0900a 	mov	r9, #10
+ldr 	r10, =0x80
+  b8:	e3a0a080 	mov	r10, #128	; 0x80
+ands	r10, r5, r10
+  bc:	e015a00a 	ands	r10, r5, r10
+bne		TOO_FAST
+  c0:	1a000002 	bne	d0 <TOO_FAST>
+cmp 	r5, r9					/* if GOOD_SPEED > 10 over current speed */
+  c4:	e1550009 	cmp	r5, r9
+ldrgt 	r2, =0x78				/* 64 hex = 120 dec */
+  c8:	c3a02078 	movgt	r2, #120	; 0x78
+b 		ACCEL_COND
+  cc:	ea000005 	b	e8 <ACCEL_COND>
+
+000000d0 <TOO_FAST>:
+TOO_FAST:
+ldr 	r10, =0xFF
+  d0:	e3a0a0ff 	mov	r10, #255	; 0xff
+eor		r5, r5, r10
+  d4:	e025500a 	eor	r5, r5, r10
+ldr 	r10, =0x1
+  d8:	e3a0a001 	mov	r10, #1
+add 	r5, r5, r10
+  dc:	e085500a 	add	r5, r5, r10
+cmp 	r5, r9 					/* if GOOD_SPEED < -10 below current speed */
+  e0:	e1550009 	cmp	r5, r9
+ldrgt 	r2, =0x88				/* 88 hex = -120 dec */
+  e4:	c3a02088 	movgt	r2, #136	; 0x88
+
+000000e8 <ACCEL_COND>:
+ACCEL_COND:
+bl		SET_ACCEL				/* accel = 12*(GOOD_SPEED - speed) if current speed within +-10 GOOD_SPEED, accel = +-100 otherwise*/
+  e8:	eb000026 	bl	188 <SET_ACCEL>
+/* TRY TO MAKE ACCELERATION MORE WHEN THE CAR IS NOT AT TARGET VELOCITY */
+/* MAKE ACCEL PRETTY MUCH MAX WHEN CAR IS ~20 SPEED AWAY, FOR EXAMPLE */
+b 		SPEED_CTRL_HILL
+  ec:	ea000001 	b	f8 <SPEED_CTRL_HILL>
+
+000000f0 <SPEED_CTRL_END>:
+SPEED_CTRL_END:					/* if speed is GOOD_SPEED, set accel to 0 */
+ldr 	r2, =0x0
+  f0:	e3a02000 	mov	r2, #0
+bl		SET_ACCEL
+  f4:	eb000023 	bl	188 <SET_ACCEL>
+
+000000f8 <SPEED_CTRL_HILL>:
+SPEED_CTRL_HILL:
+bl 		READ_POSN_Z
+  f8:	eb000028 	bl	1a0 <READ_POSN_Z>
+cmp 	r2, r8
+  fc:	e1520008 	cmp	r2, r8
+beq 	main
+ 100:	0affffc1 	beq	c <STEER_CTRL>
+mov 	r8, r2
+ 104:	e1a08002 	mov	r8, r2
+ldrgt 	r2, =0b01111111 		/* if going up, max accel */
+ 108:	c3a0207f 	movgt	r2, #127	; 0x7f
+ldrlt 	r2, =0b10000000 		/* if going down, max decel */
+ 10c:	b3a02080 	movlt	r2, #128	; 0x80
+bl 		SET_ACCEL
+ 110:	eb00001c 	bl	188 <SET_ACCEL>
+/* INSERT A SHOR TIMER OVER HERE (TRY QUARTER SECOND) */
+b  		main
+ 114:	eaffffbc 	b	c <STEER_CTRL>
+
+00000118 <READ_SENSOR>:
+
+
+READ_SENSOR:					/* r2 gets sensor readings */
+push 	{LR}
+ 118:	e52de004 	push	{lr}		; (str lr, [sp, #-4]!)
+ldr		r2, =0x02
+ 11c:	e3a02002 	mov	r2, #2
+bl		WRITE_BYTE				/* request sensor/speed data */
+ 120:	eb000029 	bl	1cc <WRITE_BYTE>
+
+00000124 <READ_SENSOR_POLL>:
+READ_SENSOR_POLL:
+bl		READ_BYTE
+ 124:	eb00002d 	bl	1e0 <READ_BYTE>
+ldr 	r4 , =0x00
+ 128:	e3a04000 	mov	r4, #0
+cmp		r2, r4
+ 12c:	e1520004 	cmp	r2, r4
+bne		READ_SENSOR_POLL				/* if packet is not sensor and speed data */
+ 130:	1afffffb 	bne	124 <READ_SENSOR_POLL>
+bl		READ_BYTE				/* get sensor data */
+ 134:	eb000029 	bl	1e0 <READ_BYTE>
+push	{r2}
+ 138:	e52d2004 	push	{r2}		; (str r2, [sp, #-4]!)
+bl		READ_BYTE				/* "burn" speed data */
+ 13c:	eb000027 	bl	1e0 <READ_BYTE>
+pop 	{r2}
+ 140:	e49d2004 	pop	{r2}		; (ldr r2, [sp], #4)
+pop		{PC}
+ 144:	e49df004 	pop	{pc}		; (ldr pc, [sp], #4)
+
+00000148 <READ_SPEED>:
+
+READ_SPEED:						/* r2 gets speed reading */
+push 	{LR}
+ 148:	e52de004 	push	{lr}		; (str lr, [sp, #-4]!)
+ldr		r2, =0x02
+ 14c:	e3a02002 	mov	r2, #2
+bl		WRITE_BYTE				/* request sensor/speed data */
+ 150:	eb00001d 	bl	1cc <WRITE_BYTE>
+
+00000154 <READ_SPEED_POLL>:
+READ_SPEED_POLL:
+bl		READ_BYTE
+ 154:	eb000021 	bl	1e0 <READ_BYTE>
+ldr 	r4 , =0x00				/* check if sensor/speed data */
+ 158:	e3a04000 	mov	r4, #0
+cmp		r2, r4
+ 15c:	e1520004 	cmp	r2, r4
+bne		READ_SPEED_POLL				/* if packet is not sensor and speed data */
+ 160:	1afffffb 	bne	154 <READ_SPEED_POLL>
+bl		READ_BYTE				/* "burn" sensor data */
+ 164:	eb00001d 	bl	1e0 <READ_BYTE>
+bl		READ_BYTE				/*get speed data */
+ 168:	eb00001c 	bl	1e0 <READ_BYTE>
+pop		{PC}
+ 16c:	e49df004 	pop	{pc}		; (ldr pc, [sp], #4)
+
+00000170 <SET_STEER>:
+
+SET_STEER:						/* set steering to value in r2 */
+push 	{r2, LR}
+ 170:	e92d4004 	push	{r2, lr}
+ldr 	r2, =0x05
+ 174:	e3a02005 	mov	r2, #5
+bl		WRITE_BYTE
+ 178:	eb000013 	bl	1cc <WRITE_BYTE>
+pop		{r2}
+ 17c:	e49d2004 	pop	{r2}		; (ldr r2, [sp], #4)
+bl		WRITE_BYTE
+ 180:	eb000011 	bl	1cc <WRITE_BYTE>
+pop		{PC}
+ 184:	e49df004 	pop	{pc}		; (ldr pc, [sp], #4)
+
+00000188 <SET_ACCEL>:
+
+SET_ACCEL:						/* set accel to value in r2 */
+push 	{r2, LR}
+ 188:	e92d4004 	push	{r2, lr}
+ldr		r2, =0x04
+ 18c:	e3a02004 	mov	r2, #4
+bl		WRITE_BYTE
+ 190:	eb00000d 	bl	1cc <WRITE_BYTE>
+pop		{r2}
+ 194:	e49d2004 	pop	{r2}		; (ldr r2, [sp], #4)
+bl		WRITE_BYTE
+ 198:	eb00000b 	bl	1cc <WRITE_BYTE>
+pop		{PC}
+ 19c:	e49df004 	pop	{pc}		; (ldr pc, [sp], #4)
+
+000001a0 <READ_POSN_Z>:
+
+READ_POSN_Z: 					/* r2 gets z position */
+push 	{LR}
+ 1a0:	e52de004 	push	{lr}		; (str lr, [sp, #-4]!)
+ldr 	r2, =0x03
+ 1a4:	e3a02003 	mov	r2, #3
+bl 		WRITE_BYTE				/*request posn data */
+ 1a8:	eb000007 	bl	1cc <WRITE_BYTE>
+
+000001ac <READ_POSN_Z_POLL>:
+READ_POSN_Z_POLL:
+bl 		READ_BYTE
+ 1ac:	eb00000b 	bl	1e0 <READ_BYTE>
+ldr		r4, =0x01				
+ 1b0:	e3a04001 	mov	r4, #1
+cmp 	r2, r4					/* check if posn data */
+ 1b4:	e1520004 	cmp	r2, r4
+bne 	READ_POSN_Z_POLL		/* if packet is not posn data */
+ 1b8:	1afffffb 	bne	1ac <READ_POSN_Z_POLL>
+bl 		READ_BYTE				/* "burn" x coord data */
+ 1bc:	eb000007 	bl	1e0 <READ_BYTE>
+bl 		READ_BYTE				/* "burn" y coord data */
+ 1c0:	eb000006 	bl	1e0 <READ_BYTE>
+bl 		READ_BYTE 				/*get z coord data */
+ 1c4:	eb000005 	bl	1e0 <READ_BYTE>
+pop 	{PC}
+ 1c8:	e49df004 	pop	{pc}		; (ldr pc, [sp], #4)
+
+000001cc <WRITE_BYTE>:
+
+WRITE_BYTE:				/* r3 gets control register */
+ldr		r3, [r7, #4] 	/* Load from the JTAG */
+ 1cc:	e5973004 	ldr	r3, [r7, #4]
+lsrs	r3, r3, #16 	/* Check only the write available bits */
+ 1d0:	e1b03823 	lsrs	r3, r3, #16
+beq		WRITE_BYTE 		/* If this is 0, data cannot be sent */
+ 1d4:	0afffffc 	beq	1cc <WRITE_BYTE>
+str		r2, [r7] 		/* Write r2 to data register */
+ 1d8:	e5872000 	str	r2, [r7]
+mov		PC, LR
+ 1dc:	e1a0f00e 	mov	pc, lr
+
+000001e0 <READ_BYTE>:
+
+READ_BYTE:
+ldr 	r3, [r7] 		/* Load from the JTAG */
+ 1e0:	e5973000 	ldr	r3, [r7]
+ands 	r2, r3, #0x8000 /* Mask other bits */
+ 1e4:	e2132902 	ands	r2, r3, #32768	; 0x8000
+beq 	READ_BYTE 		/* If this is 0, data is not valid */
+ 1e8:	0afffffc 	beq	1e0 <READ_BYTE>
+and 	r2, r3, #0x00FF /* Data read is now in r2 */
+ 1ec:	e20320ff 	and	r2, r3, #255	; 0xff
+mov		PC, LR
+ 1f0:	e1a0f00e 	mov	pc, lr
+ 1f4:	ff211020 	.word	0xff211020
